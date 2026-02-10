@@ -11,22 +11,21 @@
 
 int main() {
     int server_fd, client_fds[MAX_CLIENTS];
-    struct sockaddr_in addr;
-    int addr_len = sizeof(addr);
+    struct sockaddr_in server_addr;
     fd_set readfds;
     int max_fd;
-    
+
     // 初始化client_fds
     for (int i = 0; i < MAX_CLIENTS; i++) client_fds[i] = 0;
-    
+
     // 创建socket
     server_fd = socket(AF_INET, SOCK_STREAM, 0);
-    
+
     // 绑定
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(8080);
-    bind(server_fd, (struct sockaddr*)&addr, sizeof(addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_port = htons(8080);
+    bind(server_fd, (struct sockaddr*)&server_addr, sizeof(server_addr));
     
     // 监听
     listen(server_fd, 5);
@@ -49,7 +48,10 @@ int main() {
         
         // 新连接
         if (FD_ISSET(server_fd, &readfds)) {
-            int new_client = accept(server_fd, (struct sockaddr*)&addr, (socklen_t*)&addr_len);
+            struct sockaddr_in client_addr;
+            socklen_t client_len = sizeof(client_addr);
+
+            int new_client = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
             for (int i = 0; i < MAX_CLIENTS; i++) {
                 if (client_fds[i] == 0) {
                     client_fds[i] = new_client;
