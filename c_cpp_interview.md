@@ -7,13 +7,49 @@
 ## 📋 目录
 
 1. [C/C++ 语言基础](#1-cc-语言基础)
+   - 1.1 C与C++的核心区别
+   - 1.2 指针与引用
+   - 1.3 const 关键字的深层理解
+   - 1.4 sizeof 与 strlen 的区别
 2. [面向对象与设计模式](#2-面向对象与设计模式)
+   - 2.1 三大核心概念详解
+   - 2.2 虚函数与虚函数表
+   - 2.3 菱形继承（虚继承）
+   - 2.4 构造函数与析构函数
+   - 2.5 拷贝控制：拷贝构造与赋值运算符
+   - 2.6 常用设计模式
+     - 单例模式 (Singleton)
+     - 工厂模式 (Factory)
+     - 观察者模式 (Observer)
+     - 迭代器模式 (Iterator)
 3. [内存管理与资源管理](#3-内存管理与资源管理)
+   - 3.1 内存分区详解
+   - 3.2 new/malloc 与 delete/free 的区别
+   - 3.3 智能指针（现代 C++ 必备）
+   - 3.4 内存泄漏检测与预防
 4. [并发与多线程编程](#4-并发与多线程编程)
+   - 4.1 进程与线程
+   - 4.2 线程创建与管理
+   - 4.3 互斥锁与同步
+   - 4.4 死锁及其预防
 5. [数据结构与算法](#5-数据结构与算法)
+   - 5.1 时间复杂度速查
+   - 5.2 手写代码模板
+   - 5.3 STL 常用容器
 6. [系统编程与网络编程](#6-系统编程与网络编程)
+   - 6.1 静态库与动态库（.lib/.a/.dll/.so）
+   - 6.2 文件 I/O
+   - 6.3 Socket 编程基础
+   - 6.4 WebSocket 连接建立（WS/WSS）
 7. [医疗设备软件开发特点](#7-医疗设备软件开发特点)
+   - 7.1 医疗软件的特殊要求
+   - 7.2 相关技术要点
 8. [行为面试与项目经验](#8-行为面试与项目经验)
+   - 8.1 常见行为问题
+   - 8.2 技术追问准备
+9. [高频面试题速记](#9-高频面试题速记)
+   - 9.1 必背概念
+   - 9.2 常见陷阱
 
 ---
 
@@ -257,7 +293,103 @@ b->f1();  // 1. 通过 vptr 找到 vtable
 - 现代 CPU 的分支预测可优化
 - 性能损失约 10-20%，但在大多数场景可接受
 
-### 2.3 构造函数与析构函数
+### 2.3 菱形继承（虚继承）
+
+**问题：什么是菱形继承？有什么问题？如何解决？**
+
+**标准答案：**
+
+**菱形继承结构：**
+```
+      A (基类)
+     / \
+    B   C (都继承自 A)
+     \ /
+      D (多继承 B 和 C)
+```
+
+```cpp
+// 问题示例
+class A {
+public:
+    int data;
+};
+
+class B : public A {};
+class C : public A {};
+class D : public B, public C {};  // 菱形继承
+
+D d;
+d.data = 10;  // ❌ 编译错误！二义性
+```
+
+**问题：二义性 & 数据冗余**
+
+| 问题 | 说明 |
+|------|------|
+| **二义性** | `d.data` 编译器不知道是 `B::data` 还是 `C::data` |
+| **数据冗余** | D 对象中包含两份 A 的副本，浪费内存 |
+
+**内存布局（虚继承前）：**
+```
+D 对象内存:
+┌─────────────┐
+│  A (来自 B) │  data
+├─────────────┤
+│  B 部分     │
+├─────────────┤
+│  A (来自 C) │  data ← 冗余！两份 A
+├─────────────┤
+│  C 部分     │
+├─────────────┤
+│  D 部分     │
+└─────────────┘
+```
+
+**解决方案：虚继承（virtual inheritance）**
+
+```cpp
+class A {
+public:
+    int data;
+};
+
+class B : virtual public A {};  // 虚继承
+class C : virtual public A {};  // 虚继承
+class D : public B, public C {};
+
+D d;
+d.data = 10;  // ✅ 正确！只有一份 A
+```
+
+**内存布局（虚继承后）：**
+```
+D 对象内存:
+┌─────────────┐
+│  B 部分     │  (包含指向 A 的指针)
+├─────────────┤
+│  C 部分     │  (包含指向 A 的指针)
+├─────────────┤
+│  D 部分     │
+├─────────────┤
+│  A (共享)   │  data ← 只有一份 A
+└─────────────┘
+```
+
+**面试高频问题：**
+
+| 问题 | 答案 |
+|------|------|
+| 虚继承的代价？ | 增加指针间接访问，性能稍降 |
+| 构造顺序？ | 先构造虚基类 A，再 B、C，最后 D |
+| sizeof(D) 是多少？ | 包含两个虚继承指针 + 数据成员 |
+| 虚基类构造几次？ | 只构造一次，由最远派生类调用 |
+
+**关键记忆点：**
+- 虚基类只构造一次，在所有普通基类之前
+- 访问虚基类成员需要通过指针间接访问，有性能开销
+
+### 2.4 构造函数与析构函数
 
 **问题：构造函数的初始化列表有什么用？析构函数什么时候调用？**
 
@@ -293,7 +425,7 @@ public:
 3. 成员变量析构函数（按声明逆序）
 4. 基类析构函数
 
-### 2.4 拷贝控制：拷贝构造与赋值运算符
+### 2.5 拷贝控制：拷贝构造与赋值运算符
 
 **问题：为什么要同时实现拷贝构造和赋值运算符？**
 
@@ -371,7 +503,7 @@ SmartArray& operator=(SmartArray&& other) noexcept {
 }
 ```
 
-### 2.5 常用设计模式
+### 2.6 常用设计模式
 
 #### 单例模式 (Singleton)
 
@@ -437,6 +569,198 @@ public:
 auto shape = ShapeFactory::createShape(ShapeType::CIRCLE);
 shape->draw();
 ```
+
+#### 观察者模式 (Observer)
+
+**问题：如何实现一对多的依赖关系，当一对象状态改变时，所有依赖它的对象都得到通知？**
+
+**标准答案：**
+
+观察者模式定义对象间的一对多依赖，当一个对象改变状态时，所有依赖者都会收到通知。
+
+```
+        Subject (主题/被观察者)
+                 │
+        ┌────────┼────────┐
+        ▼        ▼        ▼
+    Observer1 Observer2 Observer3
+    (观察者)  (观察者)  (观察者)
+```
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <functional>
+#include <string>
+
+// 观察者接口
+using Observer = std::function<void(const std::string& message)>;
+
+// Subject (被观察者)
+class NewsAgency {
+private:
+    std::vector<Observer> observers_;
+    std::string latestNews_;
+
+public:
+    // 订阅（注册观察者）
+    void subscribe(Observer observer) {
+        observers_.push_back(observer);
+    }
+
+    // 取消订阅
+    void unsubscribe(Observer observer) {
+        // 简化版：实际中可以用 ID 或更复杂的移除逻辑
+        // 这里仅作示例
+    }
+
+    // 发布新闻（通知所有观察者）
+    void publish(const std::string& news) {
+        latestNews_ = news;
+        for (auto& observer : observers_) {
+            observer(news);  // 调用观察者的回调
+        }
+    }
+};
+
+// 具体观察者
+class NewsSubscriber {
+private:
+    std::string name_;
+
+public:
+    NewsSubscriber(const std::string& name) : name_(name) {}
+
+    Observer getCallback() {
+        // 返回一个 lambda 作为观察者回调
+        return [this](const std::string& news) {
+            std::cout << name_ << " 收到新闻: " << news << std::endl;
+        };
+    }
+};
+
+// 使用示例
+void demoObserver() {
+    NewsAgency agency;
+
+    // 订阅
+    NewsSubscriber sub1("订阅者A");
+    NewsSubscriber sub2("订阅者B");
+
+    agency.subscribe(sub1.getCallback());
+    agency.subscribe(sub2.getCallback());
+
+    // 发布新闻
+    agency.publish("C++11 新特性发布！");
+
+    // 输出:
+    // 订阅者A 收到新闻: C++11 新特性发布！
+    // 订阅B 收到新闻: C++11 新特性发布！
+}
+```
+
+**应用场景：**
+- GUI 事件处理（按钮点击、键盘输入）
+- 消息队列/事件总线
+- MVC 架构中的 Model-View 通信
+- 发布-订阅系统
+
+---
+
+#### 迭代器模式 (Iterator)
+
+**问题：如何遍历一个聚合对象，而又不暴露其内部表示？**
+
+**标准答案：**
+
+迭代器模式提供一种方法顺序访问聚合对象中的各个元素，而不暴露其底层表示。
+
+```cpp
+#include <iostream>
+#include <vector>
+
+// 自定义容器
+class IntContainer {
+private:
+    std::vector<int> data_;
+
+public:
+    IntContainer(const std::initializer_list<int>& list) : data_(list) {}
+
+    // 迭代器类
+    class Iterator {
+    private:
+        std::vector<int>::iterator it_;
+        std::vector<int>::iterator end_;
+
+    public:
+        Iterator(std::vector<int>::iterator it, std::vector<int>::iterator end)
+            : it_(it), end_(end) {}
+
+        // 解引用
+        int& operator*() { return *it_; }
+
+        // 箭头运算符
+        Iterator* operator->() { return this; }
+
+        // 前置 ++
+        Iterator& operator++() {
+            ++it_;
+            return *this;
+        }
+
+        // 后置 ++
+        Iterator operator++(int) {
+            Iterator temp = *this;
+            ++it_;
+            return temp;
+        }
+
+        // 相等比较
+        bool operator!=(const Iterator& other) const {
+            return it_ != other.it_;
+        }
+
+        bool operator==(const Iterator& other) const {
+            return it_ == other.it_;
+        }
+    };
+
+    // 返回迭代器
+    Iterator begin() { return Iterator(data_.begin(), data_.end()); }
+    Iterator end()   { return Iterator(data_.end(), data_.end()); }
+};
+
+// 使用示例
+void demoIterator() {
+    IntContainer container = {1, 2, 3, 4, 5};
+
+    // 范围 for 循环（需要 begin()/end()）
+    for (IntContainer::Iterator it = container.begin(); it != container.end(); ++it) {
+        std::cout << *it << " ";
+    }
+    // 输出: 1 2 3 4 5
+
+    // 也可以这样写
+    for (auto it = container.begin(); it != container.end(); ++it) {
+        std::cout << *it << " ";
+    }
+}
+```
+
+**STL 风格的迭代器类型：**
+| 类型 | 说明 | 示例 |
+|------|------|------|
+| **InputIterator** | 只读，单向 | `istream_iterator` |
+| **OutputIterator** | 只写，单向 | `ostream_iterator` |
+| **ForwardIterator** | 可读写，多遍历 | `forward_list` |
+| **BidirectionalIterator** | 双向遍历 | `list`, `set` |
+| **RandomAccessIterator** | 随机访问 | `vector`, `array` |
+
+**应用场景：**
+- STL 容器统一遍历接口
+- 范围 for 循环
+- 算法与容器解耦
 
 ---
 
@@ -834,40 +1158,929 @@ int binarySearch(const std::vector<int>& nums, int target) {
 
 ### 5.3 STL 常用容器
 
+#### 5.3.1 容器对比速查
+
+| 容器 | 底层结构 | 查找 | 插入 | 删除 | 迭代器 | 使用场景 |
+|------|---------|------|------|------|--------|----------|
+| **vector** | 动态数组 | O(n) | O(n)* | O(n)* | 随机访问 | 默认首选，频繁随机访问 |
+| **deque** | 双端队列 | O(n) | O(1) | O(1) | 随机访问 | 头尾频繁插入删除 |
+| **list** | 双向链表 | O(n) | O(1)* | O(1)* | 双向 | 中间频繁插入删除 |
+| **map** | 红黑树 | O(log n) | O(log n) | O(log n) | 双向 | 有序键值对 |
+| **unordered_map** | 哈希表 | O(1) | O(1) | O(1) | 前向 | 无序键值对，高频查找 |
+| **set** | 红黑树 | O(log n) | O(log n) | O(log n) | 双向 | 有序去重集合 |
+| **unordered_set** | 哈希表 | O(1) | O(1) | O(1) | 前向 | 无序去重集合，高频查找 |
+
+\* 表示如果已有位置指针则为 O(1)
+
+---
+
+#### 5.3.2 vector 常用操作
+
 ```cpp
-// 序列容器
-std::vector<int> vec = {1, 2, 3};      // 动态数组
-std::deque<int> deq;                   // 双端队列
-std::list<int> lst;                    // 双向链表
+#include <iostream>
+#include <vector>
+#include <algorithm>
 
-// 关联容器
-std::map<std::string, int> m;          // 红黑树，有序
-std::unordered_map<std::string, int> um;  // 哈希表，无序，更快
+using namespace std;
 
-std::set<int> s;                       // 有序集合
-std::unordered_set<int> us;            // 无序集合
+int main() {
+    // 1. 创建和初始化
+    vector<int> vec1 = {1, 2, 3, 4, 5};          // 列表初始化
+    vector<int> vec2(10);                        // 10 个元素，默认值 0
+    vector<int> vec3(10, 42);                    // 10 个元素，值都是 42
 
-// 容器适配器
-std::stack<int> stk;                   // 栈
-std::queue<int> q;                     // 队列
-std::priority_queue<int> pq;           // 优先队列（大顶堆）
+    // 2. 元素访问
+    cout << "vec1[0] = " << vec1[0] << endl;     // 不检查越界
+    cout << "vec1.at(0) = " << vec1.at(0) << endl; // 检查越界，抛异常
+    cout << "front: " << vec1.front() << endl;   // 第一个元素
+    cout << "back: " << vec1.back() << endl;     // 最后一个元素
 
-// 常用算法
-std::sort(vec.begin(), vec.end());
-auto it = std::find(vec.begin(), vec.end(), 3);
-bool exists = std::binary_search(vec.begin(), vec.end(), 3);
+    // 3. 容量操作
+    cout << "size: " << vec1.size() << endl;     // 元素个数
+    cout << "capacity: " << vec1.capacity() << endl;  // 容量
+    cout << "empty: " << vec1.empty() << endl;   // 是否为空
+    vec1.reserve(100);                           // 预留容量（不改变 size）
 
-// Lambda 表达式配合算法
-std::sort(vec.begin(), vec.end(), [](int a, int b) {
-    return a > b;  // 降序排序
-});
+    // 4. 修改操作
+    vec1.push_back(6);                           // 尾部添加
+    vec1.pop_back();                             // 尾部删除
+    vec1.insert(vec1.begin() + 2, 99);           // 在位置 2 插入
+    vec1.erase(vec1.begin() + 2);                // 删除位置 2 的元素
+    vec1.clear();                                // 清空
+
+    // 5. 遍历
+    vector<int> vec = {10, 20, 30, 40, 50};
+    for (auto it = vec.begin(); it != vec.end(); ++it) {
+        cout << *it << " ";
+    }
+    cout << endl;
+
+    // 范围 for 循环（推荐）
+    for (const auto& elem : vec) {
+        cout << elem << " ";
+    }
+    cout << endl;
+
+    return 0;
+}
 ```
+
+#### 5.3.3 map 常用操作
+
+```cpp
+#include <iostream>
+#include <map>
+#include <string>
+
+using namespace std;
+
+int main() {
+    // 1. 创建和初始化
+    map<string, int> mp;
+
+    // 2. 插入元素
+    mp["apple"] = 5;                             // [] 运算符（如果不存在则插入）
+    mp.insert({"banana", 3});                    // insert 方法
+    mp.insert(make_pair("cherry", 8));
+
+    // 3. 元素访问
+    cout << "apple: " << mp["apple"] << endl;    // [] 运算符（不存在会插入默认值）
+    cout << "banana: " << mp.at("banana") << endl; // at() 方法（不存在抛异常）
+
+    // 4. 查找操作
+    auto it = mp.find("banana");                 // 查找，返回迭代器
+    if (it != mp.end()) {
+        cout << "found: " << it->first << " -> " << it->second << endl;
+    }
+
+    int count = mp.count("cherry");              // count（map 中是 0 或 1）
+    cout << "count cherry: " << count << endl;
+
+    // 5. 删除操作
+    mp.erase("apple");                           // 按键删除
+
+    // 6. 遍历（自动按 key 排序）
+    for (const auto& pair : mp) {
+        cout << pair.first << " -> " << pair.second << endl;
+    }
+
+    // 7. 容量操作
+    cout << "size: " << mp.size() << endl;
+    cout << "empty: " << mp.empty() << endl;
+
+    return 0;
+}
+```
+
+#### 5.3.4 unordered_map 常用操作
+
+```cpp
+#include <iostream>
+#include <unordered_map>
+#include <string>
+
+using namespace std;
+
+int main() {
+    // 操作与 map 类似，但遍历时无序
+    unordered_map<string, int> ump;
+
+    // 插入
+    ump["apple"] = 5;
+    ump.insert({"banana", 3});
+    ump["cherry"] = 8;
+
+    // 查找
+    auto it = ump.find("banana");
+    if (it != ump.end()) {
+        cout << "found: " << it->first << " -> " << it->second << endl;
+    }
+
+    // 遍历（顺序不确定）
+    for (const auto& pair : ump) {
+        cout << pair.first << " -> " << pair.second << endl;
+    }
+
+    // bucket 操作（哈希表特有）
+    cout << "bucket count: " << ump.bucket_count() << endl;
+    cout << "max bucket count: " << ump.max_bucket_count() << endl;
+    cout << "load factor: " << ump.load_factor() << endl;
+
+    return 0;
+}
+```
+
+#### 5.3.5 set 常用操作
+
+```cpp
+#include <iostream>
+#include <set>
+
+using namespace std;
+
+int main() {
+    // 1. 创建和初始化（自动去重和排序）
+    set<int> s1;
+    s1.insert(5);
+    s1.insert(2);
+    s1.insert(8);
+    s1.insert(1);
+    s1.insert(9);
+    s1.insert(2);  // 重复值不会被插入
+
+    // 2. 查找
+    auto it = s1.find(5);
+    if (it != s1.end()) {
+        cout << "found: " << *it << endl;
+    }
+
+    bool exists = s1.count(8) > 0;  // count 返回 0 或 1
+    cout << "8 exists: " << exists << endl;
+
+    // 3. 范围查询（set 特有优势）
+    auto lower = s1.lower_bound(5);   // >= 5 的第一个
+    auto upper = s1.upper_bound(8);   // > 8 的第一个
+
+    cout << "elements in [5, 8]: ";
+    for (auto it = lower; it != upper; ++it) {
+        cout << *it << " ";
+    }
+    cout << endl;
+
+    // 4. 删除
+    s1.erase(5);              // 按值删除
+    s1.erase(s1.begin());     // 按迭代器删除
+
+    // 5. 遍历（有序）
+    for (const auto& elem : s1) {
+        cout << elem << " ";
+    }
+    cout << endl;
+
+    return 0;
+}
+```
+
+#### 5.3.6 list 常用操作
+
+```cpp
+#include <iostream>
+#include <list>
+#include <algorithm>
+
+using namespace std;
+
+int main() {
+    list<int> lst = {1, 2, 3, 4, 5};
+
+    // 1. 两端插入（list 优势：O(1)）
+    lst.push_front(0);      // 头部插入
+    lst.push_back(6);       // 尾部插入
+
+    // 2. 中间插入（需要先移动迭代器）
+    auto it = lst.begin();
+    advance(it, 3);         // 移动迭代器到位置 3
+    lst.insert(it, 99);     // 在位置 3 插入
+
+    // 3. 删除
+    lst.pop_front();        // 删除头部
+    lst.pop_back();         // 删除尾部
+    lst.remove(99);         // 删除所有值为 99 的元素
+
+    // 4. 特有操作（list 独有）
+    lst.sort();             // 排序（list 独有，优于通用算法）
+    lst.reverse();          // 反转
+    lst.unique();           // 删除连续重复元素
+
+    // 5. 遍历
+    for (const auto& elem : lst) {
+        cout << elem << " ";
+    }
+    cout << endl;
+
+    return 0;
+}
+```
+
+#### 5.3.7 deque 常用操作
+
+```cpp
+#include <iostream>
+#include <deque>
+
+using namespace std;
+
+int main() {
+    deque<int> dq;
+
+    // 1. 两端操作（deque 优势）
+    dq.push_back(1);    // 尾部
+    dq.push_back(2);
+    dq.push_front(0);   // 头部
+    dq.push_front(-1);
+
+    // 2. 随机访问（deque 支持，list 不支持）
+    cout << "dq[2] = " << dq[2] << endl;
+    cout << "dq.at(2) = " << dq.at(2) << endl;
+
+    // 3. 遍历
+    for (const auto& elem : dq) {
+        cout << elem << " ";
+    }
+    cout << endl;
+
+    // 4. 两端删除
+    dq.pop_front();
+    dq.pop_back();
+
+    return 0;
+}
+```
+
+#### 5.3.8 容器适配器
+
+```cpp
+#include <iostream>
+#include <stack>
+#include <queue>
+#include <vector>
+#include <functional>
+
+using namespace std;
+
+int main() {
+    // 1. stack（后进先出）
+    cout << "--- stack ---" << endl;
+    stack<int> stk;
+    stk.push(1);
+    stk.push(2);
+    stk.push(3);
+    while (!stk.empty()) {
+        cout << stk.top() << " ";  // 查看顶部
+        stk.pop();                 // 弹出
+    }
+    cout << endl;
+
+    // 2. queue（先进先出）
+    cout << "--- queue ---" << endl;
+    queue<int> q;
+    q.push(1);
+    q.push(2);
+    q.push(3);
+    while (!q.empty()) {
+        cout << q.front() << " ";  // 查看队首
+        q.pop();                   // 出队
+    }
+    cout << endl;
+
+    // 3. priority_queue（优先级队列，大顶堆）
+    cout << "--- priority_queue (大顶堆) ---" << endl;
+    priority_queue<int> pq;  // 默认大顶堆
+    pq.push(3);
+    pq.push(1);
+    pq.push(4);
+    pq.push(2);
+    while (!pq.empty()) {
+        cout << pq.top() << " ";  // 每次取最大
+        pq.pop();
+    }
+    cout << endl;
+
+    // 4. 小顶堆
+    cout << "--- priority_queue (小顶堆) ---" << endl;
+    priority_queue<int, vector<int>, greater<int>> minPq;
+    minPq.push(3);
+    minPq.push(1);
+    minPq.push(4);
+    minPq.push(2);
+    while (!minPq.empty()) {
+        cout << minPq.top() << " ";  // 每次取最小
+        minPq.pop();
+    }
+    cout << endl;
+
+    return 0;
+}
+```
+
+---
+
+#### 5.3.9 实战示例一：两数之和（LeetCode 1）
+
+**题目：** 给定一个整数数组 `nums` 和一个目标值 `target`，找出和为目标值的两个整数，返回它们的索引。
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <unordered_map>
+
+using namespace std;
+
+vector<int> twoSum(vector<int>& nums, int target) {
+    unordered_map<int, int> mp;  // 值 -> 索引
+
+    for (int i = 0; i < nums.size(); ++i) {
+        int complement = target - nums[i];
+
+        // 查找补数是否已存在
+        if (mp.find(complement) != mp.end()) {
+            return {mp[complement], i};
+        }
+
+        // 将当前值和索引存入 map
+        mp[nums[i]] = i;
+    }
+
+    return {};  // 未找到
+}
+
+int main() {
+    vector<int> nums = {2, 7, 11, 15};
+    int target = 9;
+
+    vector<int> result = twoSum(nums, target);
+
+    cout << "索引: [" << result[0] << ", " << result[1] << "]" << endl;
+    cout << "值: " << nums[result[0]] << " + " << nums[result[1]] << " = " << target << endl;
+
+    return 0;
+}
+```
+
+**输出：**
+```
+索引: [0, 1]
+值: 2 + 7 = 9
+```
+
+**关键点：**
+- 使用 `unordered_map` 实现 O(n) 时间复杂度
+- `find()` 查找补数是否存在
+- 遍历时边查找边插入，避免重复使用同一元素
+
+---
+
+#### 5.3.10 实战示例二：词频统计
+
+**题目：** 统计文本中每个单词出现的频率，并按频率从高到低排序输出。
+
+```cpp
+#include <iostream>
+#include <string>
+#include <vector>
+#include <unordered_map>
+#include <algorithm>
+#include <cctype>
+
+using namespace std;
+
+// 手动分割字符串为单词
+vector<string> splitWords(const string& text) {
+    vector<string> words;
+    string word;
+
+    for (size_t i = 0; i < text.size(); ++i) {
+        char c = text[i];
+
+        if (isalpha(c) || c == '\'') {
+            // 字母或单引号，构建单词
+            word += c;
+        } else if (!word.empty()) {
+            // 遇到分隔符且单词非空，保存单词
+            words.push_back(word);
+            word.clear();
+        }
+    }
+
+    // 处理最后一个单词
+    if (!word.empty()) {
+        words.push_back(word);
+    }
+
+    return words;
+}
+
+// 统计词频并排序
+vector<pair<string, int>> countWordFrequency(const string& text) {
+    unordered_map<string, int> wordCount;
+
+    // 分割单词
+    vector<string> words = splitWords(text);
+
+    // 统计频率（区分大小写）
+    for (const auto& word : words) {
+        if (!word.empty()) {
+            wordCount[word]++;
+        }
+    }
+
+    // 转换为 vector 并按频率排序
+    vector<pair<string, int>> freqList(wordCount.begin(), wordCount.end());
+
+    sort(freqList.begin(), freqList.end(),
+         [](const pair<string, int>& a, const pair<string, int>& b) {
+             // 频率相同按字母序，不同按频率降序
+             if (a.second != b.second) {
+                 return a.second > b.second;
+             }
+             return a.first < b.first;
+         });
+
+    return freqList;
+}
+
+int main() {
+    // 示例文本
+    string text = "C++ is a powerful programming language. C++ supports multiple "
+                  "paradigms. Programming in C++ requires understanding of memory "
+                  "management. The C++ STL provides powerful containers and algorithms. "
+                  "c++ and C++ are the same language.";
+
+    // 统计词频
+    vector<pair<string, int>> result = countWordFrequency(text);
+
+    // 输出结果
+    cout << "=== 词频统计结果（区分大小写）===" << endl;
+    cout << "单词总数: " << result.size() << endl;
+    cout << endl;
+
+    for (const auto& pair : result) {
+        cout << pair.first << ": " << pair.second << endl;
+    }
+
+    return 0;
+}
+```
+
+**输出：**
+```
+=== 词频统计结果（区分大小写）===
+单词总数: 24
+
+C++: 4
+powerful: 2
+Programming: 1
+programming: 1
+...
+```
+
+**关键点：**
+- 手动实现 `splitWords()` 函数，不使用 `<sstream>`
+- 遍历字符，根据字母和非字母边界分割单词
+- 保留单词大小写，`C++` 和 `c++` 被视为不同单词
+- 使用 `unordered_map` 统计频率，O(n) 时间复杂度
+- 转换为 `vector<pair>` 后按频率排序
+
+---
+
+#### 5.3.11 实战示例三：合并区间（LeetCode 56）
+
+**题目：** 合并所有重叠的区间。
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <algorithm>
+
+using namespace std;
+
+struct Interval {
+    int start;
+    int end;
+    Interval(int s, int e) : start(s), end(e) {}
+};
+
+vector<Interval> merge(vector<Interval>& intervals) {
+    if (intervals.empty()) return {};
+
+    // 1. 按起始时间排序
+    sort(intervals.begin(), intervals.end(),
+         [](const Interval& a, const Interval& b) {
+             return a.start < b.start;
+         });
+
+    vector<Interval> result;
+    result.push_back(intervals[0]);
+
+    // 2. 遍历合并
+    for (size_t i = 1; i < intervals.size(); ++i) {
+        Interval& last = result.back();
+
+        // 如果当前区间与上一个重叠，合并
+        if (intervals[i].start <= last.end) {
+            last.end = max(last.end, intervals[i].end);
+        } else {
+            result.push_back(intervals[i]);
+        }
+    }
+
+    return result;
+}
+
+int main() {
+    vector<Interval> intervals = {
+        Interval(1, 3),
+        Interval(2, 6),
+        Interval(8, 10),
+        Interval(15, 18)
+    };
+
+    vector<Interval> merged = merge(intervals);
+
+    cout << "合并后的区间:" << endl;
+    for (const auto& interval : merged) {
+        cout << "[" << interval.start << ", " << interval.end << "] ";
+    }
+    cout << endl;
+
+    return 0;
+}
+```
+
+**输出：**
+```
+合并后的区间:
+[1, 6] [8, 10] [15, 18]
+```
+
+---
+
+#### 5.3.12 实战示例四：前K个高频元素（LeetCode 347）
+
+**题目：** 给定一个非空数组，返回前 k 个出现频率最高的元素。
+
+```cpp
+#include <iostream>
+#include <vector>
+#include <unordered_map>
+#include <queue>
+#include <utility>
+
+using namespace std;
+
+vector<int> topKFrequent(vector<int>& nums, int k) {
+    // 1. 统计频率
+    unordered_map<int, int> freqMap;
+    for (int num : nums) {
+        freqMap[num]++;
+    }
+
+    // 2. 使用小顶堆维护前 k 个高频元素
+    // pair<频率, 值>，小顶堆按频率排序
+    using Pair = pair<int, int>;
+    priority_queue<Pair, vector<Pair>, greater<Pair>> minHeap;
+
+    for (const auto& entry : freqMap) {
+        minHeap.push({entry.second, entry.first});
+
+        // 保持堆大小为 k
+        if (minHeap.size() > k) {
+            minHeap.pop();  // 移除频率最低的
+        }
+    }
+
+    // 3. 提取结果
+    vector<int> result;
+    while (!minHeap.empty()) {
+        result.push_back(minHeap.top().second);
+        minHeap.pop();
+    }
+
+    return result;
+}
+
+int main() {
+    vector<int> nums = {1, 1, 1, 2, 2, 3};
+    int k = 2;
+
+    vector<int> result = topKFrequent(nums, k);
+
+    cout << "前 " << k << " 个高频元素: ";
+    for (int num : result) {
+        cout << num << " ";
+    }
+    cout << endl;
+
+    return 0;
+}
+```
+
+**输出：**
+```
+前 2 个高频元素: 1 2
+```
+
+---
+
+#### 5.3.13 实战示例五：有效的括号（LeetCode 20）
+
+**题目：** 给定一个只包括 `'('`，`')'`，`'{'`，`'}'`，`'['`，`']'` 的字符串，判断字符串是否有效。
+
+```cpp
+#include <iostream>
+#include <string>
+#include <stack>
+#include <unordered_map>
+
+using namespace std;
+
+bool isValid(string s) {
+    stack<char> stk;
+
+    // 定义括号匹配规则
+    unordered_map<char, char> matching = {
+        {')', '('},
+        {']', '['},
+        {'}', '{'}
+    };
+
+    for (char c : s) {
+        // 如果是左括号，入栈
+        if (c == '(' || c == '[' || c == '{') {
+            stk.push(c);
+        }
+        // 如果是右括号
+        else {
+            // 栈为空或栈顶不匹配
+            if (stk.empty() || stk.top() != matching[c]) {
+                return false;
+            }
+            stk.pop();
+        }
+    }
+
+    // 栈为空则全部匹配
+    return stk.empty();
+}
+
+int main() {
+    vector<string> tests = {
+        "()",
+        "()[]{}",
+        "(]",
+        "([)]",
+        "{[]}"
+    };
+
+    for (const auto& s : tests) {
+        cout << s << " -> " << (isValid(s) ? "有效" : "无效") << endl;
+    }
+
+    return 0;
+}
+```
+
+**输出：**
+```
+() -> 有效
+()[]{} -> 有效
+(] -> 无效
+([)] -> 无效
+{[]} -> 有效
+```
+
+---
+
+#### 5.3.14 迭代器类型速查
+
+| 迭代器类型 | 能力 | 支持操作 | 典型容器 |
+|-----------|------|---------|----------|
+| **输入迭代器** | 只读，单向 | `*it`, `++it`, `==`, `!=` | `istream_iterator` |
+| **输出迭代器** | 只写，单向 | `*it =`, `++it` | `ostream_iterator` |
+| **前向迭代器** | 可读写，多遍历 | 上述 + `->` | `forward_list`, `unordered_map` |
+| **双向迭代器** | 双向遍历 | 上述 + `--it` | `list`, `map`, `set` |
+| **随机访问迭代器** | 随机访问 | 上述 + `it[n]`, `it + n`, `it - n` | `vector`, `deque`, `array` |
+
+---
+
+#### 5.3.15 常用算法速查
+
+```cpp
+#include <algorithm>
+#include <functional>
+#include <numeric>
+
+// ========== 排序相关 ==========
+sort(vec.begin(), vec.end());                              // 升序排序
+sort(vec.begin(), vec.end(), greater<int>());              // 降序排序
+stable_sort(vec.begin(), vec.end());                       // 稳定排序
+partial_sort(vec.begin(), vec.begin() + 5, vec.end());     // 部分排序
+nth_element(vec.begin(), vec.begin() + n, vec.end());      // 第 n 大元素
+
+// ========== 查找相关 ==========
+auto it = find(vec.begin(), vec.end(), value);             // 查找值
+auto it = find_if(vec.begin(), vec.end(), pred);           // 查找满足条件的
+bool exists = binary_search(vec.begin(), vec.end(), value); // 二分查找（需先排序）
+int count = count(vec.begin(), vec.end(), value);          // 计数
+int cnt = count_if(vec.begin(), vec.end(), pred);          // 条件计数
+
+// ========== 修改相关 ==========
+reverse(vec.begin(), vec.end());                           // 反转
+fill(vec.begin(), vec.end(), value);                       // 填充
+generate(vec.begin(), vec.end(), gen);                     // 生成值
+random_shuffle(vec.begin(), vec.end());                    // 随机打乱（C++11前可用）
+
+// ========== 去重（需要先排序）==========
+sort(vec.begin(), vec.end());
+auto last = unique(vec.begin(), vec.end());                // 移到末尾
+vec.erase(last, vec.end());                                // 删除
+
+// ========== 堆操作 ==========
+make_heap(vec.begin(), vec.end());                         // 建堆
+push_heap(vec.begin(), vec.end());                         // 入堆
+pop_heap(vec.begin(), vec.end());                          // 出堆
+sort_heap(vec.begin(), vec.end());                         // 堆排序
+
+// ========== 数值算法（<numeric>）==========
+int sum = accumulate(vec.begin(), vec.end(), 0);           // 求和
+int prod = accumulate(vec.begin(), vec.end(), 1, multiplies<int>());  // 乘积
+adjacent_difference(vec.begin(), vec.end(), out.begin());   // 相邻差
+```
+
+---
+
+#### 5.3.16 容器选择建议
+
+```
+┌────────────────────────────────────────────────────────────┐
+│                    容器选择决策树                           │
+├────────────────────────────────────────────────────────────┤
+│                                                            │
+│  需要键值对存储？                                           │
+│     ├── 是 → 需要排序？                                     │
+│     │        ├── 是 → map / set                            │
+│     │        └── 否 → unordered_map / unordered_set        │
+│     │                                                      │
+│     └── 否 → 需要频繁在中间插入/删除？                       │
+│              ├── 是 → list                                 │
+│              └── 否 → 需要两端操作？                        │
+│                       ├── 是 → deque                       │
+│                       └── 否 → vector（默认首选）          │
+│                                                            │
+└────────────────────────────────────────────────────────────┘
+```
+
+| 场景 | 推荐容器 | 理由 |
+|------|---------|------|
+| 默认选择 | **vector** | 随机访问高效，内存连续，缓存友好 |
+| 需要两端频繁操作 | **deque** | 两端插入删除 O(1) |
+| 需要中间频繁插入删除 | **list** | 已知位置插入删除 O(1) |
+| 有序键值对 | **map** | 自动排序，范围查询高效 |
+| 高频查找（无序） | **unordered_map** | O(1) 平均查找 |
+| 有序去重集合 | **set** | 自动排序去重 |
+| 无序去重集合 | **unordered_set** | O(1) 平均查找插入 |
+| LIFO 场景 | **stack** | 后进先出 |
+| FIFO 场景 | **queue** | 先进先出 |
+| 动态获取最值 | **priority_queue** | 堆维护，O(log n) 插入删除 |
 
 ---
 
 ## 6. 系统编程与网络编程
 
-### 6.1 文件 I/O
+### 6.1 静态库与动态库
+
+**问题：Windows 和 Linux 平台的库文件有什么区别？**
+
+**标准答案：**
+
+**平台对比：**
+```
+┌─────────────────────────────────────────────────────────┐
+│                    静态库 vs 动态库                       │
+├─────────────────────────────────────────────────────────┤
+│                    静态库          │         动态库      │
+├─────────────────────────────────────────────────────────┤
+│  Windows     │    .lib           │        .dll          │
+│  Linux       │    .a             │        .so           │
+└─────────────────────────────────────────────────────────┘
+```
+
+**详细对比：**
+
+| 特性 | Windows .lib | Linux .a | Windows .dll | Linux .so |
+|------|-------------|---------|-------------|-----------|
+| **类型** | 静态库 OR 导入库 | 静态库 | 动态库 | 动态库 |
+| **代码** | 完整对象代码 | 完整对象代码 | 运行时加载 | 运行时加载 |
+| **链接时** | 编译时链接到 exe | 编译时链接到 exe | 需要 .lib 导入库 | 直接链接 .so |
+| **运行时** | 不需要 | 不需要 | 需要 .dll 在 PATH | 需要 .so 在 LD_LIBRARY_PATH |
+
+**关键点解释：**
+
+**1. Windows .lib 的双重身份**
+
+```cpp
+// 情况 1: .lib 作为纯静态库
+// 编译: cl /c mylib.c → lib mylib.obj
+// 链接: link main.obj mylib.lib → main.exe (代码被复制进 exe)
+
+// 情况 2: .lib 作为 DLL 的导入库（Import Library）
+// 编译: cl /LD mylib.c → mylib.dll + mylib.lib
+// 链接: link main.obj mylib.lib → main.exe (运行时需要 mylib.dll)
+//        mylib.lib 只包含符号信息，不含实际代码
+```
+
+**2. 编译链接过程对比**
+
+```
+静态链接 (Windows .lib / Linux .a):
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  main.obj    │ +   │  mylib.a/.lib│  →  │   exe (大)   │
+└──────────────┘     └──────────────┘     └──────────────┘
+                         ↑
+                    代码被复制进 exe，运行时不需要库文件
+
+动态链接 (Windows .dll / Linux .so):
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│  main.obj    │ +   │  import.lib  │  →  │  exe (小)    │
+└──────────────┘     └──────────────┘     └──────────────┘
+                                              │
+                                        运行时需要 .dll/.so
+```
+
+**3. 命名习惯**
+
+| 平台 | 静态库命名 | 动态库命名 |
+|------|-----------|-----------|
+| **Windows** | `name.lib` | `name.dll` |
+| **Linux** | `libname.a` | `libname.so` |
+
+**4. 导出符号的差异**
+
+```cpp
+// Windows: 需要显式导出
+#define EXPORT __declspec(dllexport)
+EXPORT void myFunction() {}
+
+// Linux: 默认导出所有符号
+void myFunction() {}  // 自动导出
+```
+
+**5. 运行时查找**
+
+```bash
+# Windows: DLL 搜索顺序
+# 1. 程序目录
+# 2. 当前工作目录
+# 3. System32 目录
+# 4. PATH 环境变量
+
+# Linux: .so 搜索路径
+# 1. LD_LIBRARY_PATH 环境变量
+# 2. /etc/ld.so.cache 缓存
+# 3. /lib 和 /usr/lib
+```
+
+**面试高频问题：**
+
+| 问题 | 答案 |
+|------|------|
+| .lib 是静态还是动态？ | 两者都可能，静态库包含代码，DLL导入库只含符号 |
+| 为什么需要导入库？ | Windows DLL 需要显式导出，导入库提供链接信息 |
+| Linux 为什么不需要导入库？ | .so 本身包含符号表，链接时直接使用 |
+| 动态库的优点？ | 节省内存、便于更新、减少 exe 体积 |
+| 动态库的缺点？ | 版本兼容问题（DLL Hell）、发布时需带库文件 |
+
+### 6.2 文件 I/O
 
 ```cpp
 #include <fstream>
@@ -897,7 +2110,7 @@ Data data{42, 3.14};
 binfile.write(reinterpret_cast<char*>(&data), sizeof(data));
 ```
 
-### 6.2 Socket 编程基础
+### 6.3 Socket 编程基础
 
 **TCP 服务器基本流程：**
 
@@ -934,6 +2147,139 @@ send(new_socket, "Hello", 5, 0);
 // 6. 关闭
 close(new_socket);
 close(server_fd);
+```
+
+### 6.4 WebSocket 连接建立
+
+**问题：WebSocket 和 WSS 的连接建立过程？**
+
+**标准答案：**
+
+WebSocket 是建立在 TCP 之上的全双工通信协议，连接建立分为三个阶段。
+
+#### 一、WS（明文）连接建立过程
+
+```
+客户端                                          服务器
+   │                                                │
+   │ ────────── TCP 三次握手 ─────────────────→      │
+   │   SYN → SYN+ACK → ACK                             │
+   │                                                │
+   │ ═══════════════════════════════════════════     │
+   │         TCP 连接建立完成                           │
+   │ ═══════════════════════════════════════════     │
+   │                                                │
+   │ ──── HTTP GET 握手请求 ─────────────────→       │
+   │     GET /chat HTTP/1.1                            │
+   │     Upgrade: websocket                           │
+   │     Connection: Upgrade                          │
+   │     Sec-WebSocket-Key: xxx                       │
+   │                                                │
+   │ ←─── HTTP 101 握手响应 ─────────────────         │
+   │     HTTP/1.1 101 Switching Protocols             │
+   │     Sec-WebSocket-Accept: yyy                    │
+   │                                                │
+   │ ═══════════════════════════════════════════     │
+   │      WebSocket 连接建立完成，可双向通信              │
+   │ ═══════════════════════════════════════════     │
+```
+
+#### 二、WSS（加密）连接建立过程
+
+```
+客户端                                          服务器
+   │                                                │
+   │ ────────── TCP 三次握手 ─────────────────→      │
+   │                                                │
+   │ ═══════════════════════════════════════════     │
+   │         TCP 连接建立完成                           │
+   │ ═══════════════════════════════════════════     │
+   │                                                │
+   │ ────────── TLS 握手 ───────────────────→       │
+   │   Client Hello → Server Hello                    │
+   │   ← Certificate → Key Exchange                   │
+   │   Change Cipher Spec ↔ Finished                  │
+   │                                                │
+   │ ═══════════════════════════════════════════     │
+   │      TLS 加密通道建立完成                           │
+   │ ═══════════════════════════════════════════     │
+   │                                                │
+   │ ╔══════════════════════════════════════════╗     │
+   │ ║  加密的 HTTP WebSocket 握手（通过 TLS 通道）     ║     │
+   │ ╚══════════════════════════════════════════╝     │
+   │                                                │
+   │ ──── GET /chat (加密) ─────────────────→         │
+   │ ←─── HTTP 101 (加密) ──────────────────          │
+   │                                                │
+   │ ═══════════════════════════════════════════     │
+   │    WebSocket 连接建立完成（加密双向通信）            │
+   │ ═══════════════════════════════════════════     │
+```
+
+#### 三、WebSocket 握手关键点
+
+| 阶段 | 关键字段/状态码 | 说明 |
+|------|----------------|------|
+| **TCP 握手** | SYN, SYN+ACK, ACK | 建立可靠连接 |
+| **TLS 握手**（WSS） | ClientHello, Certificate | 建立加密通道 |
+| **WebSocket 握手** | `Upgrade: websocket` | 请求协议升级 |
+| **握手完成** | HTTP 101 | 协议切换成功 |
+
+#### 四、WebSocket 帧格式
+
+```
+ 0                   1                   2                   3
+ 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
++-+-+-+-+-------+-+-------------+-------------------------------+
+|F|R|R|R| opcode|M| Payload len |    Extended payload length    |
+|I|S|S|S|  (4)  |A|     (7)     |             (16/64)           |
+|N|V|V|V|       |S|             |   (if payload len==126/127)   |
+| |1|2|3|       |K|             |                               |
++-+-+-+-+-------+-+-------------+ - - - - - - - - - - - - - - - +
+|     Extended payload length continued, if payload len == 127 |
++ - - - - - - - - - - - - - - - +-------------------------------+
+|                               |Masking-key, if MASK set to 1  |
++-------------------------------+-------------------------------+
+| Masking-key (continued)       |          Payload Data         |
++-------------------------------- - - - - - - - - - - - - - - - +
+:                     Payload Data continued ...                :
++---------------------------------------------------------------+
+```
+
+| 字段 | 说明 |
+|------|------|
+| **FIN** | 是否最后一帧 |
+| **Opcode** | 帧类型（0x1=文本, 0x2=二进制, 0x8=关闭） |
+| **MASK** | 客户端发送必须为 1 |
+| **Payload len** | 载荷长度 |
+| **Payload data** | 实际数据 |
+
+#### 五、WS vs WSS 对比
+
+| 特性 | WS | WSS |
+|------|-----|-----|
+| **URL** | `ws://` | `wss://` |
+| **默认端口** | 80 | 443 |
+| **安全性** | 明文传输 | TLS 加密 |
+| **握手过程** | TCP + HTTP Upgrade | TCP + TLS + HTTP Upgrade |
+| **应用场景** | 内网、测试环境 | 公网、生产环境 |
+
+#### 六、面试高频问题
+
+| 问题 | 答案 |
+|------|------|
+| **为什么 TCP 需要三次握手？** | 防止失效连接、同步序列号 |
+| **HTTP 101 状态码表示什么？** | Switching Protocols，协议切换成功 |
+| **WebSocket 能通过 HTTP 代理吗？** | 可以，这就是为什么先用 HTTP 握手 |
+| **为什么客户端必须掩码？** | 防止缓存投毒攻击 |
+| **WSS 的 TLS 握手在哪一步？** | TCP 连接后、WebSocket 握手前 |
+| **心跳机制如何实现？** | Ping/Pong 帧（Opcode 0x9/0xA） |
+
+**关键记忆点：**
+```
+WS 连接：  TCP → HTTP Upgrade → WebSocket
+WSS 连接： TCP → TLS → HTTP Upgrade(加密) → WebSocket(加密)
+状态码 101：协议切换成功的关键标识
 ```
 
 ---
@@ -1125,6 +2471,9 @@ delete p;  // 如果 Base 析构函数不是虚的，未定义行为
 ## ✅ 面试前检查清单
 
 - [ ] 理解虚函数表的实现机制
+- [ ] 理解菱形继承和虚继承原理
+- [ ] 了解 Windows .lib 和 Linux .a/.so 的区别
+- [ ] 理解 WebSocket/WSS 连接建立过程
 - [ ] 能够手写快速排序、二分查找、链表反转
 - [ ] 掌握智能指针的使用场景
 - [ ] 理解 RAII 和异常安全
